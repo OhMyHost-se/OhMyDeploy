@@ -19,18 +19,18 @@ on:
   workflow_dispatch:
     inputs:
       deploy_production:
-        description: Deploy to production?
+        description: 'Deploy to production?'
         required: false
         default: false
         type: boolean
 
 jobs:
   deploy:
-    uses: OhMyHost-se/OhMyDeploy/.github/workflows/deploy.yml@v1
+    uses: OhMyHost-se/OhMyDeploy/.github/workflows/deploy.yml@v1.0.1
     with:
-      project_name: my-pages-project
-      deploy_production: ${{ inputs.deploy_production }}
-      website_url: https://example.com
+      project_name: ohmyhost
+      website_url: https://ohmyhost.se
+      deploy_production: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_production || false }}
     secrets:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
