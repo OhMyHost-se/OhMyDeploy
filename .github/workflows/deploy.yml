@@ -85,14 +85,14 @@ jobs:
             exit $build_exit_code
           fi
 
-          - name: Check build directory
-          if: steps.build-step.outputs.build_success == 'true'
-          run: |
-            if [ ! -d "build" ]; then
-              echo "❌ Build directory not found. Build process may have failed."
-              exit 1
-            fi
-            echo "✅ Build directory found, proceeding with deployment"  
+      - name: Check build directory
+        if: steps.build-step.outputs.build_success == 'true'
+        run: |
+          if [ ! -d "build" ]; then
+            echo "❌ Build directory not found. Build process may have failed."
+            exit 1
+          fi
+          echo "✅ Build directory found, proceeding with deployment"  
 
       - name: Deploy to Preview
         if: inputs.deploy_production != true && steps.build-step.outputs.build_success == 'true'
