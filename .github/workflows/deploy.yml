@@ -1,14 +1,31 @@
 name: Deploy to Cloudflare Pages
 
 on:
-  push:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       deploy_production:
         description: 'Deploy to production?'
         required: false
         default: false
         type: boolean
+      project_name:
+        description: 'Cloudflare Pages project name'
+        required: true
+        type: string
+      website_url:
+        description: 'Production website URL (for summary)'
+        required: false
+        default: ''
+        type: string
+    secrets:
+      CLOUDFLARE_API_TOKEN:
+        required: true
+      CLOUDFLARE_ACCOUNT_ID:
+        required: true
+
+concurrency:
+  group: pages-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -18,6 +35,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -47,7 +66,7 @@ jobs:
 
           npm run build 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
           build_exit_code=${PIPESTATUS[0]}
-          
+
           {
             echo '```'
             echo
@@ -58,32 +77,31 @@ jobs:
             echo "**Build Status:** $([ $build_exit_code -eq 0 ] && echo '✅ Success' || echo '❌ Failed')"
             echo
           } >> "$GITHUB_STEP_SUMMARY"
-          
+
           echo "build_success=$([ $build_exit_code -eq 0 ] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
           echo "build_exit_code=$build_exit_code" >> $GITHUB_OUTPUT
-          
+
           if [ $build_exit_code -ne 0 ]; then
             exit $build_exit_code
           fi
 
-      - name: Check build directory
-        if: steps.build-step.outputs.build_success == 'true'
-        run: |
-          if [ ! -d "build" ]; then
-            echo "❌ Build directory not found. Build process may have failed."
-            exit 1
-          fi
-          echo "✅ Build directory found, proceeding with deployment"
-
+          - name: Check build directory
+          if: steps.build-step.outputs.build_success == 'true'
+          run: |
+            if [ ! -d "build" ]; then
+              echo "❌ Build directory not found. Build process may have failed."
+              exit 1
+            fi
+            echo "✅ Build directory found, proceeding with deployment"  
 
       - name: Deploy to Preview
-        if: github.event.inputs.deploy_production != 'true' && steps.build-step.outputs.build_success == 'true'
+        if: inputs.deploy_production != true && steps.build-step.outputs.build_success == 'true'
         id: deploy-preview
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: ${{ vars.CLOUDFLARE_PROJECT_NAME }}
+          projectName: ${{ inputs.project_name }}
           directory: build
           wranglerVersion: 4
           branch: preview-${{ github.run_id }}
@@ -99,15 +117,14 @@ jobs:
             echo "- Click **Run workflow** and set **Deploy to production? = true**"
           } >> "$GITHUB_STEP_SUMMARY"
 
-
       - name: Deploy to Production
-        if: github.event.inputs.deploy_production == 'true' && steps.build-step.outputs.build_success == 'true'
+        if: inputs.deploy_production == true && steps.build-step.outputs.build_success == 'true'
         id: deploy-production
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: ${{ vars.CLOUDFLARE_PROJECT_NAME }}
+          projectName: ${{ inputs.project_name }}
           directory: build
           wranglerVersion: 4
           branch: main
@@ -118,5 +135,7 @@ jobs:
           {
             echo "## ✅ Production Deployment"
             echo "Production deployment completed successfully!"
-            echo "**URL:** [${{ vars.WEBSITE_URL }}](${{ vars.WEBSITE_URL }})"
+            if [ -n "${{ inputs.website_url }}" ]; then
+              echo "**URL:** [${{ inputs.website_url }}](${{ inputs.website_url }})"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
