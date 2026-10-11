@@ -97,14 +97,11 @@ jobs:
       - name: Deploy to Preview
         if: inputs.deploy_production != true && steps.build-step.outputs.build_success == 'true'
         id: deploy-preview
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: ${{ inputs.project_name }}
-          directory: build
-          wranglerVersion: 4
-          branch: preview-${{ github.run_id }}
+          command: pages deploy build --project-name=${{ inputs.project_name }} --branch=preview-${{ github.run_id }}
 
       - name: Create preview deployment summary
         if: steps.deploy-preview.outcome == 'success' && steps.build-step.outputs.build_success == 'true'
@@ -120,14 +117,11 @@ jobs:
       - name: Deploy to Production
         if: inputs.deploy_production == true && steps.build-step.outputs.build_success == 'true'
         id: deploy-production
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: ${{ inputs.project_name }}
-          directory: build
-          wranglerVersion: 4
-          branch: main
+          command: pages deploy build --project-name=${{ inputs.project_name }} --branch=main
 
       - name: Create production deployment summary
         if: steps.deploy-production.outcome == 'success' && steps.build-step.outputs.build_success == 'true'

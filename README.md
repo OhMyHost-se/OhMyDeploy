@@ -26,7 +26,7 @@ on:
 
 jobs:
   deploy:
-    uses: OhMyHost-se/OhMyDeploy/.github/workflows/deploy.yml@v1.0.1
+    uses: OhMyHost-se/OhMyDeploy/.github/workflows/deploy.yml@v1.1.0
     with:
       project_name: ohmyhost
       website_url: https://ohmyhost.se
